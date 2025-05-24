@@ -1,0 +1,34 @@
+.carouselContainer {
+    width: 100vw; /* عرض کل صفحه */
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .track {
+    display: flex;
+    transition: transform 0.5s ease-in-out;
+  }
+  
+  .section {
+    min-width: 100vw; /* عرض هر بخش برابر با کل صفحه */
+    height: 100vh; /* ارتفاع کل صفحه */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    color: white;
+    text-align: center;
+  }
+  
+  .sectionOne {
+    background-color: #3498db;
+  }
+  
+  .sectionTwo {
+    background-color: #2ecc71;
+  }
+  
+  .sectionThree {
+    background-color: #e74c3c;
+  }
+  
