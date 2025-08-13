@@ -1,14 +1,12 @@
+// /app/Phonebook.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-  fetchPhonebook,
-  deletePhonebookEntry,
-  deleteUser,
-} from "./services/api";
+import { fetchPhonebook, deleteUser } from "./services/api";
 
 import Link from "next/link";
+import AddContactForm from "./AddContactForm";
 
 interface User {
   id: number;
@@ -49,17 +47,6 @@ const Phonebook = () => {
   useEffect(() => {
     loadData();
   }, []);
-
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("آیا از حذف این مخاطب مطمئن هستید؟")) return;
-    try {
-      await deletePhonebookEntry(id);
-      setPhonebook((prev) => prev.filter((p) => p.id !== id));
-    } catch (err) {
-      console.error(err);
-      setError("حذف مخاطب با خطا مواجه شد");
-    }
-  };
 
   const handleDeleteUser = async (userId: number) => {
     if (!window.confirm("آیا از حذف این کاربر و تمام مخاطبینش مطمئن هستید؟"))
@@ -114,14 +101,27 @@ const Phonebook = () => {
         </div>
       </div>
 
-      <div className="flex justify-center my-6">
-        <button
-          onClick={() => router.push("/add-contact")}
-          className="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700 transition"
-        >
-          ➕ افزودن مخاطب جدید
-        </button>
-      </div>
+      <AddContactForm
+        onSubmit={async (formData) => {
+          try {
+            const res = await fetch("http://localhost:3000/contacts", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(formData),
+            });
+
+            if (!res.ok) throw new Error("خطا در ثبت مخاطب");
+            const data = await res.json();
+            console.log("ثبت شد:", data);
+
+            // بعد از ثبت موفق، لیست دوباره لود شود
+            await loadData();
+            router.push("/");            
+          } catch (err) {
+            console.error(err);
+          }
+        }}
+      />
 
       <div className="container">
         {Object.entries(groupedPhonebook).map(([userName, items]) => {
