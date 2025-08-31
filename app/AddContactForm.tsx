@@ -2,132 +2,172 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { fetchUsers } from "./services/api";
+// import { useRouter } from "next/navigation";
+import { searchUsers } from "./services/api";
+import { addContact } from "./services/api";
 
-type ContactFormProps = {
-  onSubmit: (formData: {
-    userId?: string;
-    userName?: string;
-    phone: string;
-    email?: string;
-    address?: string;
-  }) => void;
+// داده‌های فرم
+export type ContactFormData = {
+  userId?: number;
+  userName?: string;
+  phone: string;
+  email?: string;
+  address?: string;
 };
 
-type UserOption = { id: string; name: string };
-const AddContactForm = ({ onSubmit }: ContactFormProps) => {
-  // export default function AddContactForm({ onSubmit }: ContactFormProps) {
-  const router = useRouter();
-  // const [suggestions, setSuggestions] = useState([]);
-  // const [users, setUsers] = useState([]);
+// پراپس‌های کامپوننت
+type AddContactFormProps = {
+  onSubmit?: (formData: ContactFormData) => void;
+};
+
+type UserOption = { id: number; name: string };
+
+const AddContactForm = ({ onSubmit }: AddContactFormProps) => {
+  // const router = useRouter();
+
   const [suggestions, setSuggestions] = useState<UserOption[]>([]);
-  const [users, setUsers] = useState<UserOption[]>([]);
-
-  useEffect(() => {
-    fetchUsers().then((data) => setUsers(data));
-  }, []);
-
-  const [formData, setFormData] = useState({
-    userId: "",
+  const [error, setError] = useState("");
+  const [formData, setFormData] = useState<ContactFormData>({
+    userId: undefined,
     userName: "",
     phone: "",
     email: "",
     address: "",
   });
 
-  const [error, setError] = useState("");
+  // 📌 تبدیل اعداد فارسی/عربی به لاتین و حذف غیرعددی
+  const normalizePhone = (value: string) => {
+    if (!value) return "";
+    const step1 = value
+      .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+      .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660));
+    return step1.replace(/\D/g, "").slice(0, 11);
+  };
 
-  // تبدیل اعداد فارسی/عربی به لاتین و حذف غیرعددی
-  // const normalizePhone = (value: string) => {
-  //   if (!value) return "";
-  //   const step1 = value
-  //     .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
-  //     .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660));
-  //   return step1.replace(/\D/g, "").slice(0, 11);
-  // };
+  // 📌 ارسال فرم
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      const payload: ContactFormData = { ...formData };
+      if (!Number.isInteger(payload.userId as number)) {
+        if (payload.userId) {
+          delete payload.userName; // اگر id مشخص بود، نیازی به name نیست
+        } else {
+          delete (payload as any).userId; // اگر id نبود، name لازمه
+        }
+      }
+      console.log("payload_1", payload);
+      const data = await addContact(payload);
+      //alert(" مخاطب با موفقیت ثبت شد ✅");
 
-  // جستجوی کاربر هنگام تایپ
-  const handleUserNameChange = (e) => {
-    const name = e.target.value.trim();
-    setFormData({ ...formData, userName: name, userId: undefined });
-
-    if (name === "") {
+      // پاک کردن فرم
+      setFormData({
+        userId: undefined,
+        userName: "",
+        phone: "",
+        email: "",
+        address: "",
+      });
       setError("");
-      return;
-    }
-    //-----------------------------------------------------------#################################################
-    const filtered = users.filter(
-      (u) => u.name.toLowerCase() === name.toLowerCase()
-    );
-
-    if (filtered.length === 0) {
-      setError("✅ کاربر جدید است. بعد از ثبت، یک مخاطب برایش ساخته می‌شود.");
-    } else {
-      setError("ℹ️ این کاربر در سیستم موجود است. از لیست انتخاب کنید.");
+      onSubmit?.(payload);
+      // alert(err.search); // اینجا میاد: "این شماره قبلاً ثبت شده است."
+      console.log("dataaaa=:", data);
+      console.log("errrrrror=:", error);
+      setError(error);
+    } catch (err) {
+      setError(err.message || "خطای داخلی سرور");
+      console.log("error.message= ", err.message);
     }
   };
 
-  // انتخاب کاربر از لیست پیشنهاد
-  const handleSelectUser = (user) => {
-    setFormData({
-      ...formData,
-      userId: user.id,
-      userName: user.name,
-    });
+  // 📌 تغییر مقادیر
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.name === "phone") {
+      setFormData({ ...formData, phone: normalizePhone(e.target.value) });
+    } else {
+      setFormData({ ...formData, [e.target.name]: e.target.value });
+    }
+  };
+  // 🔍 نگه‌داشتن query برای debounce
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 500);
+
+  // 📌 جستجو نام کاربر
+  const handleUserNameChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    //const name = e.target.value.trim();
+    const name = e.target.value;
+    setFormData({ ...formData, userName: name, userId: undefined });
+    setQuery(name); // فقط query رو تغییر می‌دیم
+  };
+
+  // 📌 وقتی کاربر تایپش تموم شد (debouncedQuery تغییر کرد)
+  useEffect(() => {
+    if (!debouncedQuery.trim()) {
+      setSuggestions([]);
+      setError("");
+      return;
+    }
+    searchUsers(debouncedQuery)
+      .then((data) => {
+        setSuggestions(data);
+        if (data.length === 0) {
+          setError(error || "✅ کاربر جدید است. بعد از ثبت ساخته می‌شود.");
+        } else {
+          setError(
+            error ||
+              "ℹ️ این کاربر در سیستم موجود است. لطفا از لیست انتخاب کنید."
+          );
+        }
+      })
+      .catch(() => setError(error || "خطا در دریافت کاربران موجود"));
+  }, [debouncedQuery]);
+
+  // 📌 انتخاب کاربر از لیست
+  const handleSelectUser = (u: { id: number; name: string }) => {
+    setFormData((f) => ({ ...f, userId: u.id, userName: u.name }));
     setSuggestions([]);
     setError("این کاربر در سیستم موجود است. در حال ثبت مخاطب برای او هستید.");
   };
 
-  // تغییر بقیه فیلدها
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  function useDebounce(value: string, delay: number) {
+    const [debouncedValue, setDebouncedValue] = useState(value);
 
-  // ارسال فرم ----------------------------------------------------------------######################
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    useEffect(() => {
+      const handler = setTimeout(() => {
+        setDebouncedValue(value);
+      }, delay);
 
-    if (!formData.userId && !formData.userName) {
-      setError("لطفا نام کاربر را وارد کنید یا از لیست انتخاب کنید.");
-      return;
-    }
+      return () => {
+        clearTimeout(handler);
+      };
+    }, [value, delay]);
 
-    await onSubmit(formData); // اینجا Phonebook خودش loadData رو صدا می‌زنه
-    setFormData({
-      userId: "",
-      userName: "",
-      phone: "",
-      email: "",
-      address: "",
-    });
-    setError("");
-  };
+    return debouncedValue;
+  }
 
   return (
-    <div className="p-4" style={{ direction: "ltr" }}>
-      <h1 className="text-2xl mb-4">➕ افزودن مخاطب جدید</h1>
-
-      <button
-        onClick={() => router.push("/")}
-        className="mb-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-      >
-        ⬅ بازگشت به صفحه اصلی
-      </button>
-
-      <form onSubmit={handleSubmit} className="space-y-3 max-w-md relative">
-        {/* ورودی نام کاربر */}
-        <div>
-          <label htmlFor="userName" className="block mb-1 font-semibold">
+    <div className="p-4 w-full" style={{ direction: "rtl" }}>
+      <form onSubmit={handleSubmit} className="space-y-3 max-w-full relative">
+        {/* نام کاربر */}
+        <div className="w-full">
+          <label
+            htmlFor="userName"
+            className="flex gap-5 max-w-full mb-1 font-semibold"
+          >
             نام کاربر:
+            {error && <p className="text-red-600 text-sm">{error}</p>}
           </label>
+
           <input
             type="text"
             id="userName"
             name="userName"
             value={formData.userName}
             onChange={handleUserNameChange}
-            className="border px-2 py-1 w-full rounded"
+            className="flex border px-2 py-1 w-full rounded"
+            style={{ direction: "ltr" }}
             placeholder="نام کاربر را وارد کنید..."
           />
           {suggestions.length > 0 && (
@@ -145,11 +185,8 @@ const AddContactForm = ({ onSubmit }: ContactFormProps) => {
           )}
         </div>
 
-        {/* پیام خطا یا هشدار */}
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-
-        {/* شماره تلفن */}
-        <div>
+        {/* تلفن */}
+        <div className="w-full">
           <label htmlFor="phone" className="block mb-1 font-semibold">
             شماره تلفن (۱۱ رقمی):
           </label>
@@ -163,6 +200,7 @@ const AddContactForm = ({ onSubmit }: ContactFormProps) => {
             required
             maxLength={11}
             className="border px-2 py-1 w-full rounded"
+            style={{ direction: "ltr" }}
           />
         </div>
 
@@ -178,6 +216,7 @@ const AddContactForm = ({ onSubmit }: ContactFormProps) => {
             value={formData.email}
             onChange={handleChange}
             className="border px-2 py-1 w-full rounded"
+            style={{ direction: "ltr" }}
           />
         </div>
 
@@ -193,14 +232,12 @@ const AddContactForm = ({ onSubmit }: ContactFormProps) => {
             value={formData.address}
             onChange={handleChange}
             className="border px-2 py-1 w-full rounded"
+            style={{ direction: "ltr" }}
           />
         </div>
 
-        {/* دکمه ارسال */}
         <button
           type="submit"
-          // onClick={() => router.refresh()}
-          // onClick={() => router.push("/")}
           className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
         >
           ثبت مخاطب
@@ -209,4 +246,5 @@ const AddContactForm = ({ onSubmit }: ContactFormProps) => {
     </div>
   );
 };
+
 export default AddContactForm;

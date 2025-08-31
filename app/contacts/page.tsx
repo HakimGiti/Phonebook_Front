@@ -236,6 +236,9 @@ export default function ContactsPage() {
                   شماره
                 </th>
                 <th className="border border-gray-400 px-4 py-2 text-center">
+                  Contact_id
+                </th>
+                <th className="border border-gray-400 px-4 py-2 text-center">
                   ردیف
                 </th>
               </tr>
@@ -259,6 +262,9 @@ export default function ContactsPage() {
                   </td>
                   <td className="border border-gray-400 px-4 py-2 text-center">
                     {c.phone}
+                  </td>
+                  <td className="border border-gray-400 px-4 py-2 text-center">
+                    {c.id}
                   </td>
                   <td className="border border-gray-400 px-4 py-2 text-center">
                     {index + 1}
