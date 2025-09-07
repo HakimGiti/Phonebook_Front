@@ -34,6 +34,7 @@ const AddContactForm = ({ onSubmit }: AddContactFormProps) => {
     email: "",
     address: "",
   });
+  const [successMessage, setSuccessMessage] = useState<string>("");
 
   // 📌 تبدیل اعداد فارسی/عربی به لاتین و حذف غیرعددی
   const normalizePhone = (value: string) => {
@@ -41,9 +42,10 @@ const AddContactForm = ({ onSubmit }: AddContactFormProps) => {
     const step1 = value
       .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
       .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660));
-    return step1.replace(/\D/g, "").slice(0, 11);
+    let numeric = step1.replace(/\D/g, "").slice(0, 11);
+    return numeric;
   };
-
+  //0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   // 📌 ارسال فرم
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -58,9 +60,15 @@ const AddContactForm = ({ onSubmit }: AddContactFormProps) => {
       }
       console.log("payload_1", payload);
       const data = await addContact(payload);
-      //alert(" مخاطب با موفقیت ثبت شد ✅");
 
-      // پاک کردن فرم
+      // اگر بک‌اند پیام خطا برگردونه (مثلا شماره تکراری)
+      if (data?.error) {
+        setError(data.error); // خطا رو ست کن
+        setSuccessMessage(""); // پیام موفقیت پاک بشه
+        return;
+      }
+
+      // ✅ پاک کردن فرم و بستن لیست پیشنهاد
       setFormData({
         userId: undefined,
         userName: "",
@@ -68,18 +76,24 @@ const AddContactForm = ({ onSubmit }: AddContactFormProps) => {
         email: "",
         address: "",
       });
+      setSuggestions([]); // 🔹 لیست پیشنهادها خالی میشه
+      setQuery(""); // 🔹 query هم ریست میشه
       setError("");
+      setSuccessMessage(" مخاطب با موفقیت ثبت شد ✔️");
+      setTimeout(() => setSuccessMessage(""), 3000);
+
       onSubmit?.(payload);
       // alert(err.search); // اینجا میاد: "این شماره قبلاً ثبت شده است."
       console.log("dataaaa=:", data);
       console.log("errrrrror=:", error);
       setError(error);
     } catch (err) {
+      setSuccessMessage(""); // پیام موفقیت پاک بشه
       setError(err.message || "خطای داخلی سرور");
-      console.log("error.message= ", err.message);
+      console.log("err.message= ", err.message);
     }
   };
-
+  //0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   // 📌 تغییر مقادیر
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.name === "phone") {
@@ -113,15 +127,14 @@ const AddContactForm = ({ onSubmit }: AddContactFormProps) => {
       .then((data) => {
         setSuggestions(data);
         if (data.length === 0) {
-          setError(error || "✅ کاربر جدید است. بعد از ثبت ساخته می‌شود.");
+          setError("✅ کاربر جدید است. بعد از ثبت ساخته می‌شود.");
         } else {
           setError(
-            error ||
-              "ℹ️ این کاربر در سیستم موجود است. لطفا از لیست انتخاب کنید."
+            "ℹ️ این کاربر در سیستم موجود است. لطفا از لیست انتخاب کنید."
           );
         }
       })
-      .catch(() => setError(error || "خطا در دریافت کاربران موجود"));
+      .catch(() => setError("خطا در دریافت کاربران موجود"));
   }, [debouncedQuery]);
 
   // 📌 انتخاب کاربر از لیست
@@ -157,7 +170,13 @@ const AddContactForm = ({ onSubmit }: AddContactFormProps) => {
             className="flex gap-5 max-w-full mb-1 font-semibold"
           >
             نام کاربر:
-            {error && <p className="text-red-600 text-sm">{error}</p>}
+            {successMessage ? (
+              <span className="ml-2 text-green-600 text-sm">
+                {successMessage}
+              </span>
+            ) : error ? (
+              <span className="ml-2 text-red-600 text-sm">{error}</span>
+            ) : null}
           </label>
 
           <input

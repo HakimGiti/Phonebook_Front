@@ -32,6 +32,7 @@ export default function UsersPage() {
             <th className="border border-gray-400 px-4 py-2">کد ملی</th>
             <th className="border border-gray-400 px-4 py-2">نام کاربری</th>
             <th className="border border-gray-400 px-4 py-2">نام</th>
+            <th className="border border-gray-400 px-4 py-2">user_id</th>
             <th className="border border-gray-400 px-4 py-2">ردیف</th>
           </tr>
         </thead>
@@ -52,6 +53,7 @@ export default function UsersPage() {
                 {user.username}
               </td>
               <td className="border border-gray-400 px-4 py-2 text-center">{user.name}</td>
+              <td className="border border-gray-400 px-4 py-2 text-center">{user.id}</td>
               <td className="border border-gray-400 px-4 py-2 text-center">{index+1}</td>
             </tr>
           ))}

@@ -209,10 +209,16 @@ const Phonebook = () => {
                 ...c,
                 userName: c.user?.name ?? "بدون نام کاربر", // اضافه شد
               }))}
-              onCancel={() => setEditingContacts(null)}
-              onSubmit={async () => {
+              onCancel={async () => {
+                await loadData(); // ⬅️ رفرش والد
                 setEditingContacts(null); // بستن مودال
-                await loadData(); // رفرش داده‌ها
+              }}
+              onSubmit={async () => {
+                await loadData(); // گرفتن داده‌های جدید از API
+                setEditingContacts(null); // بستن مودال بعد از بروزرسانی
+              }}
+              onChange={async () => {
+                await loadData(); // 🔄 همینجا هم والد رفرش میشه
               }}
             />
           </Modal>
