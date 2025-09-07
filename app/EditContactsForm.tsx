@@ -136,7 +136,7 @@ export default function EditContactsForm({
       return;
     }
 
-    const confirmDelete = window.confirm("آیا مطمئن هستید؟");
+    const confirmDelete = window.confirm("آیا از حذف این مخاطب مطمئن هستید؟");
     if (!confirmDelete) {
       // ❌ کنسل شد → هیچ کاری نکن
       return;
